@@ -66,10 +66,12 @@ def posTagConv(tag):
 
 # lemmatize text
 def lemmatizeText(text):
+    #Completar com todas as possibilidades
+    chosenPosTags = ['NNS','FW']
     lemmatizer = WordNetLemmatizer()
     tokens = word_tokenize(text)
     pos_tag = nltk.pos_tag(tokens)
-    text = " ".join([lemmatizer.lemmatize(wordPair[0],pos=posTagConv(wordPair[1])) for wordPair in pos_tag])
+    text = " ".join([lemmatizer.lemmatize(wordPair[0]) for wordPair in pos_tag if wordPair[1] in chosenPosTags])
     return text
 
 

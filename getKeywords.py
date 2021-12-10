@@ -1,8 +1,8 @@
 from rake_nltk import Rake # https://pypi.org/project/rake-nltk/
 import nltk
 
-nltk.download('stopwords')
-nltk.download('punkt')
+#nltk.download('stopwords')
+#nltk.download('punkt')
 
 def getKeywords(text):
   # Initialize Rake
