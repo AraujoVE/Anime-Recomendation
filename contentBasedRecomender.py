@@ -49,7 +49,7 @@ def create_bow_df(anime_df:pd.DataFrame):
     # # Create bag of words for with many datas
     # bagOfWordsCols = ['Synopsis_Keywords', 'Genres', 'Studios',
     #                 'Producers', 'Type', 'Episodes', 'Source', 'Duration']
-    bagOfWordsCols = ['Genres', 'Studios', 'Producers', 'Type', 'Episodes', 'Source', 'Duration']
+    bagOfWordsCols = ['Synopsis_Keywords', 'Genres', 'Studios', 'Producers', 'Type', 'Episodes', 'Source', 'Duration']
 
     bow_df = pd.DataFrame()
     bow_df['title'] = anime_df['Name']

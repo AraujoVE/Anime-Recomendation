@@ -3,8 +3,9 @@ from time import sleep
 from typing import List
 import pandas as pd
 import numpy as np
+import scipy
 from scipy.spatial.distance import cosine
-
+from sklearn.metrics.pairwise import cosine_similarity
 animeDurations = [
     {'time': 120, 'type': 'curtíssimo'},
     {'time': 600, 'type': 'curto'},
@@ -163,18 +164,37 @@ def getCossineWeights(_, featureNames: List[str]):
 
 def calcWeightedCosSim(tf_IdfMatrix, featureNames: List[str]):
     print("calcWeightedCosSim() - Calculating cosine similarity...")
+
     linesNo = tf_IdfMatrix.shape[0]
-    colsNo = tf_IdfMatrix.shape[1]
-    cosine_sim = np.zeros((linesNo, linesNo))
+    # colsNo = tf_IdfMatrix.shape[1]
+    # cosine_sim = np.zeros((linesNo, linesNo))
     cossineWeights = getCossineWeights(tf_IdfMatrix, featureNames)
-    for i in range(linesNo):
-        print(f'{i=}')
-        for j in range(i+1,linesNo):
-            elem1 = tf_IdfMatrix[i].toarray().flatten()
-            elem2 = tf_IdfMatrix[j].toarray().flatten()
-            cosine_sim[i,j] = cosine(elem1, elem2,w=cossineWeights)
-            cosine_sim[j,i] = cosine_sim[i,j]
-        cosine_sim[i,i] = 1
+    # for i in range(linesNo):
+    #     # print(f'{i=}')
+    #     for j in range(i+1,linesNo):
+    #         # elem1 = tf_IdfMatrix[i].toarray().flatten()
+    #         # elem2 = tf_IdfMatrix[j].toarray().flatten()
+    #         # cosine_sim[i,j] = cosine(elem1, elem2,w=cossineWeights)
+    #     #     cosine_sim[j,i] = cosine_sim[i,j]
+    #     # cosine_sim[i,i] = 1
+    #         pass
+
+    # pass
+
+    np_tdidf: np.ndarray = tf_IdfMatrix.toarray()
+
+    # Applying weights to u and v instead of in the cosine function (it was too slow)
+    # https://www.tutorialguruji.com/python/how-does-the-parameter-weights-work-in-scipy-spatial-distance-cosine/
+    # https://stats.stackexchange.com/questions/384419/weighted-cosine-similarity/448904#448904
+
+    squareRootWeights = np.sqrt(cossineWeights)
+    np_tdidf_weighted = np_tdidf * squareRootWeights
+
+    print(f"** CALCULATING COSINE SIMILARITY **")
+    print(f"This part takes a while...")
+    # in cosine_similarity(matrixA, matrixB = None) if matrixB is None, 
+    # it calculates the cosine similarity between matrixA and matrixA
+    cosine_sim = cosine_similarity(np_tdidf) # Cosine similarity matrix between lines of the same matrix
 
     print("calcWeightedCosSim() - Done!")
     return cosine_sim
