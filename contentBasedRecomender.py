@@ -46,9 +46,10 @@ def read_anime_df():
 
 def create_bow_df(anime_df:pd.DataFrame):
     print("Creating BOW dataframe")
-    # Create bag of words for with many datas
-    bagOfWordsCols = ['Synopsis_Keywords', 'Genres', 'Studios',
-                    'Producers', 'Type', 'Episodes', 'Source', 'Duration']
+    # # Create bag of words for with many datas
+    # bagOfWordsCols = ['Synopsis_Keywords', 'Genres', 'Studios',
+    #                 'Producers', 'Type', 'Episodes', 'Source', 'Duration']
+    bagOfWordsCols = ['Genres', 'Studios', 'Producers', 'Type', 'Episodes', 'Source', 'Duration']
 
     bow_df = pd.DataFrame()
     bow_df['title'] = anime_df['Name']
@@ -84,7 +85,6 @@ def execute(params: ExecutionParams, bow_df: pd.DataFrame):
 
     print("Calculating cosine similarity")
     # Computing the cosine similarity matrix: Option 2
-    print(f'{featureNames=}')
     cosine_sim = calcWeightedCosSim(tfidf_matrix, featureNames)
     print(cosine_sim)
 
@@ -111,7 +111,9 @@ def main():
 def test():
     anime_df = read_anime_df()
     bow_df = create_bow_df(anime_df)
+    bow_df.to_csv('bowdf.csv')
+    
 
 if __name__ == "__main__":
-    # main()
-    test()
+    main()
+    # test()
