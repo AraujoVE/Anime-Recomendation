@@ -1,0 +1,7 @@
+num2words
+nltk
+rake_nltk
+numpy
+pandas
+contractions
+pandas-stubs

@@ -1,8 +1,9 @@
 import re
-from numpy.core.numeric import indices
+from typing import List
 import pandas as pd
 import numpy as np
 from scipy.spatial.distance import cosine
+
 animeDurations = [
     {'time': 120, 'type': 'curtíssimo'},
     {'time': 600, 'type': 'curto'},
@@ -10,8 +11,8 @@ animeDurations = [
     {'time': 2400, 'type': 'grande'},
     {'time': 4800, 'type': 'grandíssimo'}
 ]
-biggestDurationType = 'maior'
 
+biggestDurationType = 'maior'
 
 def splitCols(df, cols, delimiter=','): 
     for col in cols:
@@ -64,24 +65,30 @@ def lowerCaseCols(df,cols):
         df[col] = df[col].apply(lambda x: re.sub(r'\s+','_',x.lower().strip()))
     return df
 
-def setKeywords(line, chossenCols):
-    returnText = ''
-    for col in chossenCols:
-        tag = ' ' + col + '___'
-        returnText += tag
-        if isinstance(line[col], list):
-            joinedTexts = tag.join(line[col])
-            returnText += joinedTexts
-            #if 'taiwan' in joinedTexts:
-            #    print(returnText)
-        else:
-            returnText += str(line[col])
-    returnText = re.sub(r'.*___unknown(?=$|\s)','',returnText).strip()
-    return returnText
+def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]):
+    # Cells from a column 'col' become 'col___value'
+    # They are all append to a string, separated by spaces
 
-def getContentBasedRecommendation(df_final, cosine_sim, indices, title, selectionRange):
-    movies = []
+    prefixedKeywords = []
+    for colName in chosenCols:
+        prefix = ' ' + colName + '___'
+        cell = line[colName]
 
+        localKeywords = []
+        if isinstance(cell, list):
+            localKeywords = cell
+        elif isinstance(cell, str):
+            localKeywords = [cell]        
+
+
+        prefixedKeywords.append(prefix.join(localKeywords))
+
+    filter_unknown = lambda keyword: not keyword.startswith('unknown')
+    filteredKeywords = filter(filter_unknown, prefixedKeywords)
+
+    return list(filteredKeywords)
+
+def getContentBasedRecommendation(df_bow: pd.DataFrame, cosine_sim, indices, title: str, selectionRange: int):
     if not title in indices['title'].tolist():
         return "Ops, title not in our database..."
 
@@ -94,10 +101,10 @@ def getContentBasedRecommendation(df_final, cosine_sim, indices, title, selectio
     # Top 'selectionRange' most similar anime indexes
     top_animes_rec = list(scores.iloc[1:selectionRange].index) # from 1 to 'selectionRange', because 0 is the searched title always
   
-    return pd.DataFrame(df_final['title'].iloc[top_animes_rec]) # Return the titles of the top 'selectionRange' most similar anime
+    return pd.DataFrame(df_bow['title'].iloc[top_animes_rec]) # Return the titles of the top 'selectionRange' most similar anime
 
-def getCossineWeights(df,colsIndices):
-    weightsPerType = {
+def getCossineWeights(df, colsIndices: List[str]):
+    colWeights = {
         'synopsis_keywords' : 100,
         'genres' : 10,
         'type' : 1,
@@ -108,39 +115,41 @@ def getCossineWeights(df,colsIndices):
         'duration' : 1,
         'none': 0
     }
-    totalWeights = sum(weightsPerType.values())
-    for weight in weightsPerType.keys():
-        weightsPerType[weight] /= totalWeights
 
-    weights = []
+    # Normalize the weights
+    totalWeights = sum(colWeights.values())
+    for colName in colWeights.keys():
+        colWeights[colName] /= totalWeights
 
+    foundColNames = []
+    print(f'{colsIndices=}')
     for col in colsIndices:
+        # print(f'{col=}')
         if col == '':
-            weights.append('none')
+            print ("Empty col still exists!")
+            foundColNames.append('none')
         else:
-            weights.append(col.split('___')[0])
+            foundColNames.append(col.split('___')[0])
     
-    for weight in weightsPerType.keys():
-        weightsPerType[weight] /= weights.count(weight)
+    # for colName in colWeights.keys():
+    #     colWeights[colName] /= foundColNames.count(colName)
     
-    for i in range(len(weights)):
-        weights[i] = weightsPerType[weights[i]]        
+    for i in range(len(foundColNames)):
+        foundColNames[i] = colWeights[foundColNames[i]]        
 
-    return np.array(weights)
+    return np.array(foundColNames)
 
-def calcWeightedCosSim(tf_IdfMatrix,indices):
+def calcWeightedCosSim(tf_IdfMatrix, featureNames: List[str]):
     linesNo = tf_IdfMatrix.shape[0]
     colsNo = tf_IdfMatrix.shape[1]
     cosine_sim = np.zeros((linesNo, linesNo))
     print("Começou :( ")
-    cossineWeights = getCossineWeights(tf_IdfMatrix,indices)
+    cossineWeights = getCossineWeights(tf_IdfMatrix, featureNames)
     print("Acabou :D ")
     for i in range(linesNo):
         for j in range(i+1,linesNo):
-            elem1 = tf_IdfMatrix[i] #TODO:Está em dimensão (1,colsNo). Converter para (colsNo,)
-            elem2 = tf_IdfMatrix[j] #TODO:Está em dimensão (1,colsNo). Converter para (colsNo,)
-            print("elem1 = ",elem1.shape)
-            print("coss",cossineWeights.shape)
+            elem1 = tf_IdfMatrix[i].toarray().flatten()
+            elem2 = tf_IdfMatrix[j].toarray().flatten()
             cosine_sim[i,j] = cosine(elem1, elem2,w=cossineWeights)
             cosine_sim[j,i] = cosine_sim[i,j]
         cosine_sim[i,i] = 1
