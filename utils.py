@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 from scipy.spatial.distance import cosine
 from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 animeDurations = [
     {'time': 120, 'type': 'curtíssimo'},
     {'time': 600, 'type': 'curto'},
@@ -194,7 +195,20 @@ def calcWeightedCosSim(tf_IdfMatrix, featureNames: List[str]):
     print(f"This part takes a while...")
     # in cosine_similarity(matrixA, matrixB = None) if matrixB is None, 
     # it calculates the cosine similarity between matrixA and matrixA
-    cosine_sim = cosine_similarity(np_tdidf) # Cosine similarity matrix between lines of the same matrix
+
+    line_step = 100
+    cosine_sim = np.zeros((linesNo, linesNo))
+
+    pbar = tqdm(range(0, linesNo, line_step), desc="Generating cosine similarity", unit=f'{line_step} lines')
+    for i in pbar:
+        pbar.set_description(f"Generating cosine similarity for lines {i} to {i+line_step} (total: {linesNo}, step: {line_step})...")
+        cosine_sim[i:i+line_step] = cosine_similarity(np_tdidf_weighted[i:i+line_step], np_tdidf_weighted[:])
+        partial_df = pd.DataFrame(cosine_sim[i:i+line_step])
+        partial_df.to_csv(f'cosine/cosine_sim_partial_s{line_step}_i{i}.csv')
+
+    # Save cosine similarity matrix
+    cosine_sim_df = pd.DataFrame(cosine_sim)
+    cosine_sim_df.to_csv('cosine_sim.csv', index=False, header=False)
 
     print("calcWeightedCosSim() - Done!")
     return cosine_sim
