@@ -167,20 +167,7 @@ def calcWeightedCosSim(tf_IdfMatrix, featureNames: List[str]):
     print("calcWeightedCosSim() - Calculating cosine similarity...")
 
     linesNo = tf_IdfMatrix.shape[0]
-    # colsNo = tf_IdfMatrix.shape[1]
-    # cosine_sim = np.zeros((linesNo, linesNo))
     cossineWeights = getCossineWeights(tf_IdfMatrix, featureNames)
-    # for i in range(linesNo):
-    #     # print(f'{i=}')
-    #     for j in range(i+1,linesNo):
-    #         # elem1 = tf_IdfMatrix[i].toarray().flatten()
-    #         # elem2 = tf_IdfMatrix[j].toarray().flatten()
-    #         # cosine_sim[i,j] = cosine(elem1, elem2,w=cossineWeights)
-    #     #     cosine_sim[j,i] = cosine_sim[i,j]
-    #     # cosine_sim[i,i] = 1
-    #         pass
-
-    # pass
 
     np_tdidf: np.ndarray = tf_IdfMatrix.toarray()
 
@@ -193,22 +180,21 @@ def calcWeightedCosSim(tf_IdfMatrix, featureNames: List[str]):
 
     print(f"** CALCULATING COSINE SIMILARITY **")
     print(f"This part takes a while...")
-    # in cosine_similarity(matrixA, matrixB = None) if matrixB is None, 
-    # it calculates the cosine similarity between matrixA and matrixA
 
-    line_step = 100
-    cosine_sim = np.zeros((linesNo, linesNo))
+    start = 9000
+    line_step = 50
 
-    pbar = tqdm(range(0, linesNo, line_step), desc="Generating cosine similarity", unit=f'{line_step} lines')
+    pbar = tqdm(range(start, linesNo, line_step), desc="Generating cosine similarity", unit=f'{line_step} lines')
     for i in pbar:
         pbar.set_description(f"Generating cosine similarity for lines {i} to {i+line_step} (total: {linesNo}, step: {line_step})...")
-        cosine_sim[i:i+line_step] = cosine_similarity(np_tdidf_weighted[i:i+line_step], np_tdidf_weighted[:])
-        partial_df = pd.DataFrame(cosine_sim[i:i+line_step])
+        partial_cosine_sim = cosine_similarity(np_tdidf_weighted[i:i+line_step], np_tdidf_weighted[:])
+        partial_df = pd.DataFrame(partial_cosine_sim)
+        # Save the cosine partials
         partial_df.to_csv(f'cosine/cosine_sim_partial_s{line_step}_i{i}.csv')
 
-    # Save cosine similarity matrix
-    cosine_sim_df = pd.DataFrame(cosine_sim)
-    cosine_sim_df.to_csv('cosine_sim.csv', index=False, header=False)
+    # # Save cosine similarity matrix
+    # cosine_sim_df = pd.DataFrame(cosine_sim)
+    # cosine_sim_df.to_csv('cosine/cosine_sim.csv', index=False, header=False)
 
     print("calcWeightedCosSim() - Done!")
     return cosine_sim
