@@ -3,10 +3,12 @@ from time import sleep
 from typing import List
 import pandas as pd
 import numpy as np
-import scipy
 from scipy.spatial.distance import cosine
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
+
+from cosine import PartialMatrixCreationParams, create_weighted_cosine_similarity_matrix
+
 animeDurations = [
     {'time': 120, 'type': 'curtíssimo'},
     {'time': 600, 'type': 'curto'},
@@ -123,8 +125,11 @@ def getContentBasedRecommendation(df_bow: pd.DataFrame, cosine_sim, indices, tit
   
     return pd.DataFrame(df_bow['title'].iloc[top_animes_rec]) # Return the titles of the top 'selectionRange' most similar anime
 
-def getCossineWeights(_, featureNames: List[str]):
+def getColWeights(_, prefixedKeywords: List[str]):
+
     print("getCossineWeights() - creating weights...")
+
+    # TODO: assert the following dict is on the same order of the original columns
     colWeights = {
         'synopsis_keywords' : 100,
         'genres' : 10,
@@ -137,64 +142,49 @@ def getCossineWeights(_, featureNames: List[str]):
         'none': 0
     }
 
-    # Normalize the weights
+    # Normalize the weights (sum of all weights = 1)
     totalWeights = sum(colWeights.values())
     for colName in colWeights.keys():
         colWeights[colName] /= totalWeights
 
-    foundColNames = []
-    
-    for col in featureNames:
-        if col == '':
-            print ("Empty col still exists!")
-            foundColNames.append('none')
+
+    colFrequency = {}
+
+    # Count the frequency of each column on the prefixedKeywords list
+    for prefixedKeyword in prefixedKeywords:
+        if prefixedKeyword == '':
+            print("WARNING: Empty prefixedKeyword, this shouldn't happen!!") #TODO: remove this
+            colName = 'none'
         else:
-            foundColNames.append(col.split('___')[0])
+            colName, keyword = prefixedKeyword.split('___')
 
-    for colName in colWeights.keys():
-        count = foundColNames.count(colName)
-        if count > 0:
-            colWeights[colName] /= count
+        if colName in colFrequency:
+            colFrequency[colName] += 1
+        else:
+            colFrequency[colName] = 1
 
-    weights = np.zeros(len(foundColNames))
-    for i in range(len(foundColNames)):
-        weights[i] = colWeights[foundColNames[i]]        
+    # Reduce the weights of columns that are too frequent
+    for colName, colFreq in colFrequency.items():
+        if colFreq > 0:
+            colWeights[colName] /= colFreq
 
-    print("getCossineWeights() - weights created!")
+    colNames = list(colWeights.keys()) # TODO: assert the following dict is on the same order of the original columns
+
+    # Convert weights to a list
+    weights = np.array([ colWeights[colName] for colName in colNames ])
+
     return weights
 
-def calcWeightedCosSim(tf_IdfMatrix, featureNames: List[str]):
-    print("calcWeightedCosSim() - Calculating cosine similarity...")
+def calcAnimeSimilarity(tf_IdfMatrix, featureNames: List[str]):
+    print("calcAnimeSimilarity()")
 
-    linesNo = tf_IdfMatrix.shape[0]
-    cossineWeights = getCossineWeights(tf_IdfMatrix, featureNames)
+    print("calcAnimeSimilarity() - creating weights for each col...")
+    cossineWeights = getColWeights(tf_IdfMatrix, featureNames)
+
+    params = PartialMatrixCreationParams(
+        partials_folder='cosine/partials',
+        merged_filename='cosine/merged.csv',
+    )
 
     np_tdidf: np.ndarray = tf_IdfMatrix.toarray()
-
-    # Applying weights to u and v instead of in the cosine function (it was too slow)
-    # https://www.tutorialguruji.com/python/how-does-the-parameter-weights-work-in-scipy-spatial-distance-cosine/
-    # https://stats.stackexchange.com/questions/384419/weighted-cosine-similarity/448904#448904
-
-    squareRootWeights = np.sqrt(cossineWeights)
-    np_tdidf_weighted = np_tdidf * squareRootWeights
-
-    print(f"** CALCULATING COSINE SIMILARITY **")
-    print(f"This part takes a while...")
-
-    start = 9000
-    line_step = 50
-
-    pbar = tqdm(range(start, linesNo, line_step), desc="Generating cosine similarity", unit=f'{line_step} lines')
-    for i in pbar:
-        pbar.set_description(f"Generating cosine similarity for lines {i} to {i+line_step} (total: {linesNo}, step: {line_step})...")
-        partial_cosine_sim = cosine_similarity(np_tdidf_weighted[i:i+line_step], np_tdidf_weighted[:])
-        partial_df = pd.DataFrame(partial_cosine_sim)
-        # Save the cosine partials
-        partial_df.to_csv(f'cosine/cosine_sim_partial_s{line_step}_i{i}.csv')
-
-    # # Save cosine similarity matrix
-    # cosine_sim_df = pd.DataFrame(cosine_sim)
-    # cosine_sim_df.to_csv('cosine/cosine_sim.csv', index=False, header=False)
-
-    print("calcWeightedCosSim() - Done!")
-    return cosine_sim
+    create_weighted_cosine_similarity_matrix(np_tdidf, cossineWeights, params)

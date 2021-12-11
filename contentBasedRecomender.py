@@ -85,7 +85,7 @@ def execute(params: ExecutionParams, bow_df: pd.DataFrame):
 
     print("Calculating cosine similarity")
     # Computing the cosine similarity matrix: Option 2
-    cosine_sim = calcWeightedCosSim(tfidf_matrix, featureNames)
+    cosine_sim = calcAnimeSimilarity(tfidf_matrix, featureNames)
     print(cosine_sim)
 
     print(f"Executing (2) recomender for {params.animeName=} with selection range {params.selectionRange=}")

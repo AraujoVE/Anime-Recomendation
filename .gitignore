@@ -140,6 +140,7 @@ dmypy.json
 # Project-specific files
 
 cosine/
+cosine_first_run/
 
 
 
