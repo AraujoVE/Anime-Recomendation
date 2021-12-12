@@ -28,7 +28,7 @@ def merge_datasets():
         generateSynopsisKeywords()
 
     # Merge everything together
-    from cols import MAL_ID, NAME, SCORE, GENRES, TYPE, EPISODES, STUDIOS, PRODUCERS, SOURCE, DURATION, SYNOPSIS_KEYWORDS
+    from cols import MAL_ID, NAME, SCORE, GENRES, TYPE, EPISODES, STUDIOS, PRODUCERS, SOURCE, DURATION
 
     # Read anime.csv
     print(f'[MergeDatasets] Reading {ANIME_CSV}...')
@@ -37,7 +37,8 @@ def merge_datasets():
 
     # Read anime_with_synopsis.csv
     print(f'[MergeDatasets] Reading {ANIME_WITH_SYNOPSIS_KEYWORDS_CSV}...')
-    anime_with_synopsis_cols = [ MAL_ID, SYNOPSIS_KEYWORDS ]
+    from cols import SYNOPSIS, SYNOPSIS_KEYWORDS
+    anime_with_synopsis_cols = [ MAL_ID, SYNOPSIS, SYNOPSIS_KEYWORDS ]
     anime_with_synopsis = pd.read_csv(ANIME_WITH_SYNOPSIS_KEYWORDS_CSV, usecols=anime_with_synopsis_cols)
 
     # Merge datasets

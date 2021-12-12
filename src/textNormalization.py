@@ -171,7 +171,7 @@ def normalizeTextToKeywords(text: str, delimiter: str = ",") -> str:
     text = removeDoubleSpaces(text)
     text = trimSpaces(text)
 
-    text.replace(" ", delimiter)
+    text = text.replace(" ", delimiter)
 
     return text
 

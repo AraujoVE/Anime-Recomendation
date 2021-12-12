@@ -6,6 +6,7 @@ import numpy as np
 from scipy.spatial.distance import cosine
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
+import cols
 
 from cosine import PartialMatrixCreationParams, create_weighted_cosine_similarity_matrix
 
@@ -19,9 +20,9 @@ animeDurations = [
 
 biggestDurationType = 'maior'
 
-def splitCols(df, cols, delimiter=','): 
+def splitCols(df, cols, list_delimiter=','): 
     for col in cols:
-        df[col] = df[col].apply(lambda x: [elem.strip('_') for elem in x.lower().split(delimiter)])
+        df[col] = df[col].apply(lambda cell: [item.strip('_') for item in cell.lower().split(list_delimiter)])
     return df
 
 def standardizeDuration(duration):
@@ -60,9 +61,10 @@ def standardizeDuration(duration):
     '''
     return time
 
-def removeInvalidRows(df, col, remove_rows_labels):
+def removeInvalidRows(df: pd.DataFrame, col: str, remove_rows_labels: List[str]):
     for label in remove_rows_labels:
-        df.drop(df[df[col] == label].index, inplace = True)
+        matches = df[col] == label
+        df.drop(df[matches].index, inplace=True)
     return df
 
 def lowerCaseCols(df,cols):
@@ -73,6 +75,7 @@ def lowerCaseCols(df,cols):
 def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]) -> str:
     # Cells from a column 'col' become 'col___value'
     # They are all append to a string, separated by spaces
+
     def filter_unknown (keyword: str): 
         return not keyword.strip().lower().startswith('unknown')
 
@@ -95,8 +98,6 @@ def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]) -> str:
 
         if colKeywords:
             prefixedKeywordsStr = f'{prefix}{prefix.join(colKeywords)}' # Extra prefix in the beginning, because join doens't place it in the beginning
-
-            # print(f'{colName} -> {prefixedKeywordsStr}')
             prefixedKeywordsList.append(prefixedKeywordsStr)
 
         else:
@@ -104,87 +105,127 @@ def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]) -> str:
             # print(f'Cell: {cell}')
             pass
 
-    result = ''.join(prefixedKeywordsList)
-    # print(f'Result: {result}')
-    # sleep(1)
+    result = ' '.join(prefixedKeywordsList)
     return result
 
-def getContentBasedRecommendation(df_bow: pd.DataFrame, cosine_sim, indices, title: str, selectionRange: int):
+def getContentBasedRecommendation(df_bow: pd.DataFrame, merged_cos_sim_filename: str, indices: pd.Series, title: str, selectionRange: int):
     print("getContentBasedRecommendation()")
-    if not title in indices['title'].tolist():
+    if not title in indices.index.tolist():
         return "Ops, title not in our database..."
 
     # Get the index of the movie that matches the title
-    title_index = indices[indices['title'] == title].index[0]
+    title_index = indices[title] + 1 # +1 account for the header
 
-    # Cosine similarity scores of anime titles in descending order (most similar is on top)
-    scores = pd.Series(cosine_sim[title_index]).sort_values(ascending = False)
+    with open(merged_cos_sim_filename, 'rb') as cos_sim_file:
+        cos_sim_matrix_sliced = pd.read_csv(cos_sim_file, skiprows=title_index, nrows=1, header=None)
+        cos_sim_series = pd.Series(cos_sim_matrix_sliced.iloc[0])
 
-    # Top 'selectionRange' most similar anime indexes
-    top_animes_rec = list(scores.iloc[1:selectionRange].index) # from 1 to 'selectionRange', because 0 is the searched title always
-  
-    return pd.DataFrame(df_bow['title'].iloc[top_animes_rec]) # Return the titles of the top 'selectionRange' most similar anime
 
-def getColWeights(_, prefixedKeywords: List[str]):
+    # Reorder it by similarity, excluding itself
+    cos_sim_series.sort_values(ascending=False, inplace=True)
+    cos_sim_series_most_similar = cos_sim_series[0:selectionRange+1]
 
-    print("getCossineWeights() - creating weights...")
+    # Get first selectionRange titles
+    print("top_similar_animes cos: ", cos_sim_series_most_similar)
+    top_similar_animes_indices = cos_sim_series_most_similar.index.tolist()
 
+
+    our_anime = df_bow.iloc[title_index]
+    print("our_anime: \n", our_anime)
+    print("bag of words: \n", our_anime['bag_of_words'])
+    print()
+
+    # Get the actual titles of the selectionRange most similar movies
+    similiar_animes = df_bow.iloc[top_similar_animes_indices]
+    for sim_anime in similiar_animes.itertuples():
+        print(sim_anime[1])
+        print("Bag of words: \n", sim_anime[2])
+        print()
+
+
+    return pd.DataFrame(similiar_animes) # Return the titles of the top 'selectionRange' most similar anime
+
+def getColWeights(_, features: List[str]):
+    print('[ColWeights] Starting calculations...')
     # TODO: assert the following dict is on the same order of the original columns
     colWeights = {
-        'synopsis_keywords' : 100,
+        'synopsis_keywords' : 0,
         'genres' : 10,
-        'type' : 1,
-        'episodes' : 1,
-        'studios' : 1,
-        'producers' : 1,
-        'source' : 1,
-        'duration' : 1,
+        'type' : 0,
+        'episodes' : 0,
+        'studios' : 0,
+        'producers' : 0,
+        'source' : 0,
+        'duration' : 0,
         'none': 0
     }
 
+    def featureColName(feature: str):
+        if feature == '': return 'none'
+        return feature.split('___')[0]
+
     # Normalize the weights (sum of all weights = 1)
-    totalWeights = sum(colWeights.values())
-    for colName in colWeights.keys():
-        colWeights[colName] /= totalWeights
+    print('[ColWeights] Normalizing input weights...')
+    
+    activeCols = { featureColName(feature) for feature in features if featureColName(feature) in colWeights }
+    inactiveCols = { colName for colName in colWeights if colName not in activeCols }
 
 
-    colFrequency = {}
+    print('[ColWeights] Active cols: ', activeCols)
+    totalActiveColsWeight = sum([colWeights[col] for col in activeCols])
+    print('[ColWeights] Total active cols weight: ', totalActiveColsWeight)
+    for colName in activeCols:
+        colWeights[colName] /= totalActiveColsWeight
 
-    # Count the frequency of each column on the prefixedKeywords list
-    for prefixedKeyword in prefixedKeywords:
-        if prefixedKeyword == '':
-            print("WARNING: Empty prefixedKeyword, this shouldn't happen!!") #TODO: remove this
-            colName = 'none'
-        else:
-            colName, keyword = prefixedKeyword.split('___')
+    for colName in inactiveCols:
+        colWeights[colName] = 0
 
-        if colName in colFrequency:
-            colFrequency[colName] += 1
-        else:
-            colFrequency[colName] = 1
+    print('[ColWeights] Normalized col weights: ', colWeights)
+    assert (abs(sum(colWeights.values()) - 1) < 0.001), "Sum of weights is not 1"
+
+    # Calculate the weights of each column
+    print('[ColWeights] Analyzing col frequencies...')
+    colFrequency = { featureColName(feature): 0 for feature in features }
+
+    for feature in features:
+        colFrequency[featureColName(feature)] += 1
 
     # Reduce the weights of columns that are too frequent
+    # Count the frequency of each column on the feature list
+    print('[ColWeights] Reducing weights...')
     for colName, colFreq in colFrequency.items():
         if colFreq > 0:
             colWeights[colName] /= colFreq
+ 
 
-    colNames = list(colWeights.keys()) # TODO: assert the following dict is on the same order of the original columns
+    print(colWeights)
 
     # Convert weights to a list
-    weights = np.array([ colWeights[colName] for colName in colNames ])
+    print('[ColWeights] Expand weights to match features...')
+    featureWeights = np.array([ colWeights[featureColName(feature)] for feature in features ])
 
-    return weights
+    assert (abs(sum(featureWeights) - 1) < 0.001), "Sum of weights is not 1"
 
-def calcAnimeSimilarity(tf_IdfMatrix, featureNames: List[str]):
-    print("calcAnimeSimilarity()")
+    return featureWeights
 
-    print("calcAnimeSimilarity() - creating weights for each col...")
-    cossineWeights = getColWeights(tf_IdfMatrix, featureNames)
+def calcAnimeSimilarityMatrix(animeNames: List[str], tf_IdfMatrix, featureNames: List[str]):
+    print('[CalcAnimeSimilarity] - Starting...')
+
+    print('[CalcAnimeSimilarity] - Calculating cosine similarity...')
+    colWeights = getColWeights(tf_IdfMatrix, featureNames)
 
     params = PartialMatrixCreationParams(
         partials_folder='cosine/partials',
         merged_filename='cosine/merged.csv',
+        step_size=100,
     )
 
-    np_tdidf: np.ndarray = tf_IdfMatrix.toarray()
-    create_weighted_cosine_similarity_matrix(np_tdidf, cossineWeights, params)
+    np_tfIdf: np.ndarray = tf_IdfMatrix.toarray()
+
+    print('[CalcAnimeSimilarity] - Creating partial cosine similarity matrices...')
+    create_weighted_cosine_similarity_matrix(
+        headers=animeNames,
+        matrix=np_tfIdf,
+        params=params,
+        colWeights=colWeights
+    )

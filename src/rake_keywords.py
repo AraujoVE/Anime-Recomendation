@@ -1,5 +1,5 @@
 from rake_nltk import Rake # https://pypi.org/project/rake-nltk/
-from src.nltk_resources import download_all_nltk_resources_if_needed  
+from nltk_resources import download_all_nltk_resources_if_needed  
 download_all_nltk_resources_if_needed() # TODO: download only nedeed resources
 
 def getKeywords(text):
@@ -16,3 +16,7 @@ def getKeywords(text):
   # Return new keywords as list, ignoring scores
   # Obs.: we could change this, selecting only the words with higher score
   return(list(scores.keys()))
+
+if __name__ == '__main__':
+  text = "This is a sample text. It has nothing to do with the keywords extraction."
+  print(getKeywords(text))
