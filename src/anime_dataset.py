@@ -1,60 +1,32 @@
-from dataclasses import dataclass
-from enum import Enum
+from unittest import case
 import pandas as pd
+import cols
+from utils import lowerCaseCols, removeInvalidRows, splitCols, standardizeDuration
 
 DATASET_FOLDER = 'dataset'
 
-class AnimeDatasetCol(Enum):
-    MAL_ID = 0
-    NAME = 1
-    SCORE = 2
-    GENRES = 3
-    TYPE = 4
-    EPISODES = 5
-    STUDIOS = 6
-    PRODUCERS = 7
-    SOURCE = 8
-    DURATION = 9
-
-
 class AnimeDataset:
     def __init__(self):
-        self.anime_df = pd.read_csv(f'{DATASET_FOLDER}/anime.csv')
+        from cols import MAL_ID, NAME, SCORE, GENRES, TYPE, EPISODES, STUDIOS, PRODUCERS, SOURCE, DURATION, SYNOPSIS_KEYWORDS
+        anime_csv_cols = [ MAL_ID, NAME, SCORE, GENRES, TYPE, EPISODES, STUDIOS, PRODUCERS, SOURCE, DURATION, SYNOPSIS_KEYWORDS ]
 
-    pass
+        self.anime_df = pd.read_csv(f'{DATASET_FOLDER}/anime_merged.csv', usecols=anime_csv_cols)
+        self._preprocess_df()
 
-def read_anime_df():
-    print("Reading anime data")
-    cols_to_use = ['MAL_ID', 'Synopsis_Keywords']
-    sypnopsis = pd.read_csv(
-        'dataset/anime_with_synopsis_keywords.csv', usecols=cols_to_use)
+    def _preprocess_df(self):
+        self.anime_df.dropna(inplace=True) # drop rows with missing values
+        self.anime_df = removeInvalidRows(self.anime_df, cols.TYPE,  [ 'Music', 'Unknown' ]) #TODO: string constants and GUI choice
+        self.anime_df.drop_duplicates(subset=['Name'], inplace=True)
 
-    # Get anime data
-    cols_to_use = ['MAL_ID', 'Name', 'Score', 'Genres', 'Type',
-                'Episodes', 'Studios', 'Producers', 'Source', 'Duration']
-    anime_data = pd.read_csv('dataset/anime.csv', usecols=cols_to_use)
+        lowerCasedCols = ['Synopsis_Keywords', 'Genres', 'Type',
+                            'Episodes', 'Studios', 'Producers', 'Source', 'Duration']
+        lowerCaseCols(self.anime_df, lowerCasedCols)
+        self.anime_df[cols.DURATION] = self.anime_df[cols.DURATION].apply(standardizeDuration)
 
-    # Merge synopsis and anime data
-    anime_df = anime_data.merge(sypnopsis, how='left', on='MAL_ID')
-    anime_df.dropna(inplace=True)
+        pluralCols = [ cols.SYNOPSIS_KEYWORDS, cols.GENRES, cols.STUDIOS, cols.PRODUCERS ]
+        splitCols(self.anime_df, pluralCols)
 
-    # Remove rows with 'Music' and 'Unknown' type
-    remove_label = ['Music', 'Unknown']
-    anime_df = removeInvalidRows(anime_df, 'Type', remove_label)
+    def search_by_name(self, name) -> pd.DataFrame:
+        return self.anime_df[self.anime_df['Name'].str.contains(name, case=False)].sort_values(by=['Score'], ascending=False)
 
-    # Remove duplicates
-    anime_df.drop_duplicates(subset='Name', inplace=True)
-
-    # Set data to lower case and replace spaces with underscores
-    lowerCasedCols = ['Synopsis_Keywords', 'Genres', 'Type',
-                    'Episodes', 'Studios', 'Producers', 'Source', 'Duration']
-    lowerCaseCols(anime_df, lowerCasedCols)
-
-    # Standardize durations
-    anime_df["Duration"] = anime_df["Duration"].apply(standardizeDuration)
-
-    # Split given cols into lists
-    toSplitCols = ['Synopsis_Keywords', 'Genres', 'Studios', 'Producers']
-    splitCols(anime_df, toSplitCols)
-
-    return anime_df
+ANIME_DATASET = AnimeDataset()

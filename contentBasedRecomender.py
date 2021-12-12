@@ -3,9 +3,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
 from getKeywords import *
 from src.anime_dataset import read_anime_df
-from utils import *
+from src.utils import *
 
-def create_bow_df(anime_df:pd.DataFrame):
+def create_bow_df(anime_df: pd.DataFrame):
     print("Creating BOW dataframe")
     # # Create bag of words for with many datas
     # bagOfWordsCols = ['Synopsis_Keywords', 'Genres', 'Studios',
