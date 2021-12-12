@@ -1,4 +1,4 @@
-import nltk
+import nltk # type: ignore
 from dataclasses import dataclass
 
 @dataclass
