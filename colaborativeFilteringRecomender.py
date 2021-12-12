@@ -3,12 +3,14 @@ import numpy as np
 from pandas.core.frame import DataFrame
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import csr_matrix
+import sklearn.neighbors as ng
 
 MIN_ANIME_REV = 500
 
 def getCFRecommendation(anime_collaborative_filter: np.ndarray, anime_name_df: DataFrame, title: str, n_neighbors: int = 10):
   # Creating KNN to classify our animes based on the ratings
-  model_knn = NearestNeighbors(metric='cosine', n_neighbors = n_neighbors)
+  model_knn = NearestNeighbors(metric='minkowski', n_neighbors = n_neighbors, algorithm = 'kd_tree') # kd_tree = efficient for large datasets and small dimensions -> O(D N log N) where D = num. of dimensions and N = num. of points
+  # Another option for metric + algo. is bruteforce + cosine distance
   model_knn.fit(csr_matrix(anime_collaborative_filter))
   
   query_index = anime_name_df[anime_name_df['Name'].str.lower() == title.lower()].index[0]
@@ -59,7 +61,7 @@ def readAndJoinAnimeCSVs():
   print(anime_name_df.head())
 
   # Importing rating dataset
-  rating_df = pd.read_csv('dataset/rating_complete.csv', nrows = 900000)
+  rating_df = pd.read_csv('dataset/rating_complete.csv', nrows = 1500000)
 
   # Showing some info about the dataset
   print("-> Rating dataset loaded")
