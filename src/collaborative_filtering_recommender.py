@@ -11,15 +11,21 @@ ANIME_MIN_COMPLETED = 500
 def getCFRecommendation(rating_matrix_CF: np.ndarray, anime_name_df: DataFrame, title: str, n_neighbors: int = 10):
     # Creating KNN to classify our animes based on the ratings
     print("\t> Criando modelo de kNN para recomendar animes")
-    
-    # Creating a KNN model using ball_tree -> can't be used because of sparse matrix
-    # model_knn = NearestNeighbors(metric='minkowski', n_neighbors=n_neighbors, algorithm='ball_tree')
-    # Another option for metric + algo. is bruteforce + cosine distance
+
+    # Metric + algorithm used : bruteforce + cosine distance
     model_knn = NearestNeighbors(metric='cosine', n_neighbors=n_neighbors, algorithm='brute')
     
+    # Calculating sparsity of rating_matrix_CF
+    sparsity = 1.0 - np.count_nonzero(rating_matrix_CF) / rating_matrix_CF.size
+    print("\t> 'Sparsity' da matriz de avaliações para o CF: {:.3f}".format(sparsity))
+
     # CSR matrix = Compressed Sparse Row matrix
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
     model_knn.fit(csr_matrix(rating_matrix_CF))
+
+    # [ALTERNATIVE] Creating a KNN model using ball_tree -> good for big datasets and a lot of dimensions (O[D N log N])
+    # model_knn = NearestNeighbors(metric='minkowski', n_neighbors=n_neighbors, algorithm='ball_tree')
+    # model_knn.fit(rating_matrix_CF)
 
     query_index = anime_name_df[anime_name_df['Name'].str.lower() == title.lower()].index[0]
 
