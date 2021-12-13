@@ -1,11 +1,14 @@
-from dataclasses import dataclass
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
-from rake_keywords import getKeywords
 from anime_dataset import ANIME_DATASET, AnimeDataset
 from utils import *
 import cols
+import tfidf
+import cosine
+
+SIMILARITY_MATRIX_PATH = 'cosine/merged.csv'
+
 
 class ContentBasedRecommender:
     def __init__(self, anime_dataset: AnimeDataset):
@@ -13,11 +16,23 @@ class ContentBasedRecommender:
 
         self.anime_dataset = anime_dataset
         self.bow_df = self._create_bow_df()
-        self.tfidf_df = self._initialize_tfidf()
+        self._initialize_tfidf()
 
     def _set_default_prefs(self) -> None:
         ''' Sets the default preferences for the recommender '''
-        self.colsToUse = [ cols.SYNOPSIS_KEYWORDS, cols.GENRES, cols.STUDIOS, cols.PRODUCERS, cols.TYPE, cols.EPISODES, cols.SOURCE, cols.DURATION]
+        self.colsToUse = [cols.SYNOPSIS_KEYWORDS, cols.GENRES, cols.STUDIOS,
+                          cols.PRODUCERS, cols.TYPE, cols.EPISODES, cols.SOURCE, cols.DURATION]
+
+        self.colWeights = {
+            'synopsis_keywords': 100,
+            'genres': 50,
+            'type': 5,
+            'episodes': 2,
+            'studios': 2,
+            'producers': 1,
+            'source': 1,
+            'duration': 1,
+        }
 
     def _create_bow_df(self) -> pd.DataFrame:
         ''' Creates a dataframe with the bow (Bag of Words) representation of the anime titles '''
@@ -27,7 +42,8 @@ class ContentBasedRecommender:
         bow_df[cols.MAL_ID] = self.anime_dataset.anime_df[cols.MAL_ID]
         bow_df[cols.NAME] = self.anime_dataset.anime_df[cols.NAME]
 
-        bow_df[cols.BAG_OF_WORDS] = self.anime_dataset.anime_df.apply(createPrefixedKeywords, axis='columns', args=(colsToApplyBOW,))
+        bow_df[cols.BAG_OF_WORDS] = self.anime_dataset.anime_df.apply(
+            createPrefixedKeywords, axis='columns', args=(colsToApplyBOW,))
 
         return bow_df
 
@@ -35,36 +51,73 @@ class ContentBasedRecommender:
         ''' Creates a dataframe with the tfidf representation of the anime titles '''
         # Defining a TF-IDF Vectorizer Object.
         # TF-IDF represents how important is a word in the phrase to a document.
-        self.tfidf_vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split(' '))
+        self.tfidf_vectorizer = TfidfVectorizer(
+            tokenizer=lambda x: x.split(' '))
 
-        # Constructing the required TF-IDF matrix by fitting and transforming the data. 
+        # Constructing the required TF-IDF matrix by fitting and transforming the data.
         print("[ContentBasedRecomender] Creating TF-IDF matrix")
-        self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(self.bow_df[cols.BAG_OF_WORDS])
+        self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(
+            self.bow_df[cols.BAG_OF_WORDS])
 
-        featureNames = self.tfidf_vectorizer.get_feature_names_out()
-        assert '' not in featureNames
-        assert (len(featureNames) == self.tfidf_matrix.shape[1]), "Feature names and matrix dimensions do not match"
+        self.tfidf_feature_names = self.tfidf_vectorizer.get_feature_names_out()
+        assert '' not in self.tfidf_feature_names
+        assert (len(self.tfidf_feature_names) ==
+                self.tfidf_matrix.shape[1]), "Feature names and matrix dimensions do not match"
+
+    def _use_disk_similarity_matrix(self) -> None:
+        ''' Creates a similarity matrix in disk for the anime titles if it does not exist '''
+        print('[ContentBasedRecomender] - Looking for similarity matrix in disk')
+
+        if os.path.exists(SIMILARITY_MATRIX_PATH):
+            print(
+                f"[CalcAnimeSimilarity] - Similarity matrix already exists at {SIMILARITY_MATRIX_PATH}")
+            return
+
+        print(
+            f"[CalcAnimeSimilarity] - Similarity matrix does not exist at {SIMILARITY_MATRIX_PATH}")
+        print("[CalcAnimeSimilarity] - Computing similarity matrix...")
+
+        print('[CalcAnimeSimilarity] - Calculating feature weights...')
+
+        feature_weights = tfidf.calcFeatureWeights(
+            self.tfidf_feature_names, self.colWeights)
+
+        # Applying weights to u and v instead of in the cosine function (it was too slow)
+        # https://www.tutorialguruji.com/python/how-does-the-parameter-weights-work-in-scipy-spatial-distance-cosine/
+        # https://stats.stackexchange.com/questions/384419/weighted-cosine-similarity/448904#448904
+        weighted_matrix = self.tfidf_matrix * np.sqrt(feature_weights) 
+        #TODO: check if this is correct (csr_matrix, it was np.array before)
+
+        params = PartialMatrixCreationParams(
+            partials_folder='cosine/partials',
+            merged_filename='cosine/merged.csv',
+            step_size=100,
+            keep_partials=False,
+        )
+
+        print('[CalcAnimeSimilarity] - Creating partial cosine similarity matrices...')
+        cosine.create_cosine_similarity_matrix(
+            headers='PLACEHOLDER_HEADER', #TODO: remove this placeholder
+            matrix=weighted_matrix,
+            params=params,
+        )
 
     def execute(self, animeName: str, selectionRange: int) -> pd.DateOffset:
         print(f"[ContentBasedRecomender] Executing for {animeName}")
-  
+
         # Creating list of indices for later matching
         indices = pd.Series(self.bow_df.index, index=self.bow_df[cols.NAME])
         animeNames = indices.index.values
 
-        # Computing the cosine similarity matrix
-        # if cosine folder already exists, do not compute cosine similarity again
-        if not os.path.exists('cosine/merged.csv'):
-            print("[ContentBasedRecomender] Computing cosine similarity matrix...")
-            calcAnimeSimilarityMatrix(animeNames, self.tfidf_matrix, self.tfidf_vectorizer.get_feature_names_out())
-        else:
-            print("[ContentBasedRecomender] Cosine similarity matrix already exists")
+        self._use_disk_similarity_matrix()
+
         # Get most similar to chosen anime
         print("[ContentBasedRecomender] Looking for similar anime...")
         mostSimilar = getContentBasedRecommendation(
-            self.bow_df, 'cosine/merged.csv', indices, animeName, selectionRange)
+            self.bow_df, SIMILARITY_MATRIX_PATH, indices, animeName, selectionRange)
 
         return mostSimilar
+
 
 def prompt_anime(suggest_similar: bool = True) -> str:
     ''' Prompts the user for a valid anime name '''
@@ -76,11 +129,12 @@ def prompt_anime(suggest_similar: bool = True) -> str:
             return anime_name
 
         if suggest_similar:
-            print("[ContentBasedRecomender] Anime not found, did you mean one of these?")
+            print(
+                "[ContentBasedRecomender] Anime not found, did you mean one of these?")
             print_similar_anime(anime_name)
         else:
             print("[ContentBasedRecomender] Anime not found")
-            
+
 
 def print_similar_anime(anime_name: str):
     search_results = ANIME_DATASET.search_by_name(anime_name)
@@ -88,6 +142,7 @@ def print_similar_anime(anime_name: str):
         print(search_results[[cols.MAL_ID, cols.NAME]])
     else:
         print("[ContentBasedRecomender] No similar anime found")
+
 
 def main():
     # Initialize recommender and dataset
@@ -105,6 +160,7 @@ def main():
     # Print results
     print("Similar animes:")
     print(recommended_df)
+
 
 if __name__ == "__main__":
     main()
