@@ -102,21 +102,42 @@ class ContentBasedRecommender:
             params=params,
         )
 
+    def _find_similar_anime(self, anime_index: int, count: int) -> pd.DataFrame:
+        HEADER_PRESENT = True # TODO: remove this placeholder
+        if HEADER_PRESENT:
+            anime_index += 1
+
+        # Reads the similarity matrix from disk in the specific line (anime_index)
+        anime_simililarity_row = pd.Series(pd.read_csv(SIMILARITY_MATRIX_PATH, skiprows=anime_index, nrows=1, header=None).iloc[0])
+
+        # Sorts the similarity matrix in descending order
+        anime_simililarity_row.sort_values(ascending=False, inplace=True)
+
+        # Excludes itself from the similarity matrix
+        anime_simililarity_row.drop(anime_simililarity_row.index[anime_simililarity_row.index == anime_index], inplace=True)
+
+        # Returns the top n most similar anime titles
+
+        similar_anime_df = pd.DataFrame()
+        similar_anime_df[cols.NAME] = self.anime_dataset.anime_df[cols.NAME].iloc[anime_simililarity_row.index[:count]]
+        similar_anime_df['Similarity'] = anime_simililarity_row.iloc[:count]
+        similar_anime_df[cols.GENRES] = self.anime_dataset.anime_df[cols.GENRES].iloc[anime_simililarity_row.index[:count]]
+
+        return similar_anime_df
+
     def execute(self, animeName: str, selectionRange: int) -> pd.DateOffset:
         print(f"[ContentBasedRecomender] Executing for {animeName}")
 
-        # Creating list of indices for later matching
-        indices = pd.Series(self.bow_df.index, index=self.bow_df[cols.NAME])
-        animeNames = indices.index.values
+        anime = ANIME_DATASET.get_by_name(animeName)
 
         self._use_disk_similarity_matrix()
 
         # Get most similar to chosen anime
         print("[ContentBasedRecomender] Looking for similar anime...")
-        mostSimilar = getContentBasedRecommendation(
-            self.bow_df, SIMILARITY_MATRIX_PATH, indices, animeName, selectionRange)
+        anime_index = ANIME_DATASET.convert_id_to_index(anime[cols.MAL_ID])
+        similarity_df = self._find_similar_anime(anime_index, selectionRange)
 
-        return mostSimilar
+        return similarity_df
 
 
 def prompt_anime(suggest_similar: bool = True) -> str:

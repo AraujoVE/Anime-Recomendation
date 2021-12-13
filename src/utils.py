@@ -108,32 +108,3 @@ def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]) -> str:
 
     result = ' '.join(prefixedKeywordsList)
     return result
-
-def getContentBasedRecommendation(df_bow: pd.DataFrame, merged_cos_sim_filename: str, indices: pd.Series, title: str, selectionRange: int):
-    if not title in indices.index.tolist():
-        raise Exception(f'Title {title} not found in indices')
-
-    # Get the index of the movie that matches the title
-    title_index = indices[title] + 1 # +1 account for the header
-
-    with open(merged_cos_sim_filename, 'rb') as cos_sim_file:
-        cos_sim_matrix_sliced = pd.read_csv(cos_sim_file, skiprows=title_index, nrows=1, header=None)
-        cos_sim_series = pd.Series(cos_sim_matrix_sliced.iloc[0])
-
-    # Reorder it by similarity, excluding itself
-    cos_sim_series.sort_values(ascending=False, inplace=True)
-    cos_sim_series_most_similar = cos_sim_series[1:selectionRange+1]
-
-    # Get first selectionRange titles
-    top_similar_animes_indices = cos_sim_series_most_similar.index.tolist()
-
-    # Get the actual titles of the selectionRange most similar movies
-    similiar_animes = df_bow.loc[top_similar_animes_indices]
-
-    # Remove BOW column
-    similiar_animes.drop(cols.BAG_OF_WORDS, axis=1, inplace=True)
-
-    # Add cosine similarity to the dataframe
-    similiar_animes['Similarity'] = cos_sim_series_most_similar.copy()
-
-    return pd.DataFrame(similiar_animes) # Return the titles of the top 'selectionRange' most similar anime
