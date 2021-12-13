@@ -114,10 +114,7 @@ def merge_partial_similarity_matrices(headers: List[str], partials_folder: str, 
 
 
 def create_weighted_cosine_similarity_matrix(headers: List[str], matrix: np.ndarray, colWeights: np.ndarray, params: PartialMatrixCreationParams) -> str:
-    # Applying weights to u and v instead of in the cosine function (it was too slow)
-    # https://www.tutorialguruji.com/python/how-does-the-parameter-weights-work-in-scipy-spatial-distance-cosine/
-    # https://stats.stackexchange.com/questions/384419/weighted-cosine-similarity/448904#448904
-
+    
     sqrt_colWeights = np.sqrt(colWeights)
     weighted_matrix = matrix * sqrt_colWeights
     return create_cosine_similarity_matrix(headers, weighted_matrix, params)
