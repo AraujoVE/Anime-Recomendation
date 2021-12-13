@@ -42,8 +42,6 @@ class AnimeDataset:
 
         self.anime_df.reset_index(inplace=True, drop=True)
 
-        self.anime_df.to_csv(f'anime_merged_preprocessed.csv', index=False)
-
     def get_by_name(self, name: str) -> Optional[pd.Series]:
         results = self.anime_df[self.anime_df[cols.NAME] == name]
         if len(results) == 0:

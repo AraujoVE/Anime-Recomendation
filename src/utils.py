@@ -212,6 +212,7 @@ def calcAnimeSimilarityMatrix(animeNames: List[str], tf_IdfMatrix, featureNames:
         partials_folder='cosine/partials',
         merged_filename='cosine/merged.csv',
         step_size=100,
+        keep_partials=False,
     )
 
     np_tfIdf: np.ndarray = tf_IdfMatrix.toarray()
