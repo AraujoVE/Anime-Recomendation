@@ -121,6 +121,12 @@ def main():
 
         if not search_anime.lower() in anime_name_df['Name'].str.lower().tolist():
             print("-> Título não encontrado na nossa base de dados...")
+
+            similar_animes = anime_name_df[anime_name_df['Name'].str.contains(search_anime, case=False)]
+            if not similar_animes.empty:
+                print("-> Animes Similares:")
+                print(similar_animes)
+
             continue
 
         # if anime is not complete, we can't find recommendations
