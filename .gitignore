@@ -1,4 +1,3 @@
-dataset/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -139,9 +138,9 @@ dmypy.json
 
 # Project-specific files
 
-cosine/
-cosine_first_run/
-
+/dataset/
+/cosine/
+archive.zip
 
 
 

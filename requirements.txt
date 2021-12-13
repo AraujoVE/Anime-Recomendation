@@ -6,3 +6,4 @@ pandas
 contractions
 pandas-stubs
 tqdm
+dearpygui
