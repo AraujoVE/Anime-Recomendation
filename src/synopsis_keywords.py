@@ -1,5 +1,5 @@
 import pandas as pd
-from textNormalization import normalizeTextToKeywords
+from text_normalization import normalizeTextToKeywords
 from nltk_resources import download_all_nltk_resources_if_needed
 download_all_nltk_resources_if_needed() # TODO: download only needed resources
 
