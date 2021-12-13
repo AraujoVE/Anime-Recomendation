@@ -3,7 +3,6 @@ import numpy as np
 from pandas.core.frame import DataFrame
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import csr_matrix
-import sklearn.neighbors as ng
 
 MIN_ANIME_REV = 500
 
@@ -73,8 +72,7 @@ def readAndJoinAnimeCSVs():
     print(anime_name_df.head())
 
     # Importing rating dataset
-    rating_df = pd.read_csv('dataset/rating_complete.csv',
-                            skiprows=lambda x: x > 0 and x < 1500000, nrows=1500000*2)
+    rating_df = pd.read_csv('dataset/rating_complete.csv', nrows=1500000)
 
     # Showing some info about the dataset
     print("-> Rating dataset loaded")
