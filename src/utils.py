@@ -82,7 +82,7 @@ def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]) -> str:
     prefixedKeywordsList = []
     for colName in chosenCols:
 
-        prefix = ' ' + colName + '___'
+        prefix = colName + '___'
         cell = line[colName]
 
         colKeywords = []
@@ -97,13 +97,14 @@ def createPrefixedKeywords(line: pd.Series, chosenCols: List[str]) -> str:
         colKeywords = list(filter(filter_unknown, colKeywords))
 
         if colKeywords:
-            prefixedKeywordsStr = f'{prefix}{prefix.join(colKeywords)}' # Extra prefix in the beginning, because join doens't place it in the beginning
-            prefixedKeywordsList.append(prefixedKeywordsStr)
+            prefixedColKeywords = [prefix + keyword for keyword in colKeywords]
+            prefixedKeywordsList.extend(prefixedColKeywords)
 
         else:
             # print(f'!!! Empty col: {colName} !!!')
             # print(f'Cell: {cell}')
             pass
+
 
     result = ' '.join(prefixedKeywordsList)
     return result
@@ -129,14 +130,17 @@ def getContentBasedRecommendation(df_bow: pd.DataFrame, merged_cos_sim_filename:
     print("top_similar_animes cos: ", cos_sim_series_most_similar)
     top_similar_animes_indices = cos_sim_series_most_similar.index.tolist()
 
-
     our_anime = df_bow.iloc[title_index]
     print("our_anime: \n", our_anime)
-    print("bag of words: \n", our_anime['bag_of_words'])
+    print("bag of words: \n", our_anime[cols.BAG_OF_WORDS])
     print()
 
     # Get the actual titles of the selectionRange most similar movies
     similiar_animes = df_bow.iloc[top_similar_animes_indices]
+
+    # Add cosine similarity to the dataframe
+    similiar_animes['cos_sim'] = cos_sim_series_most_similar
+
     for sim_anime in similiar_animes.itertuples():
         print(sim_anime[1])
         print("Bag of words: \n", sim_anime[2])
@@ -157,11 +161,10 @@ def getColWeights(_, features: List[str]):
         'producers' : 0,
         'source' : 0,
         'duration' : 0,
-        'none': 0
     }
 
     def featureColName(feature: str):
-        if feature == '': return 'none'
+        if feature == '': raise Exception('Empty feature')
         return feature.split('___')[0]
 
     # Normalize the weights (sum of all weights = 1)
@@ -169,7 +172,6 @@ def getColWeights(_, features: List[str]):
     
     activeCols = { featureColName(feature) for feature in features if featureColName(feature) in colWeights }
     inactiveCols = { colName for colName in colWeights if colName not in activeCols }
-
 
     print('[ColWeights] Active cols: ', activeCols)
     totalActiveColsWeight = sum([colWeights[col] for col in activeCols])
@@ -197,14 +199,16 @@ def getColWeights(_, features: List[str]):
         if colFreq > 0:
             colWeights[colName] /= colFreq
  
-
+    
     print(colWeights)
 
     # Convert weights to a list
     print('[ColWeights] Expand weights to match features...')
     featureWeights = np.array([ colWeights[featureColName(feature)] for feature in features ])
+    assert len(featureWeights) == len(features), "Weights and features are not the same length"
 
     assert (abs(sum(featureWeights) - 1) < 0.001), "Sum of weights is not 1"
+
 
     return featureWeights
 
