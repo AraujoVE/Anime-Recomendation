@@ -7,7 +7,7 @@ from anime_dataset import ANIME_DATASET, AnimeDataset
 from utils import *
 import cols
 
-class ContentBasedRecomender:
+class ContentBasedRecommender:
     def __init__(self, anime_dataset: AnimeDataset):
         self._set_default_prefs()
 
@@ -36,7 +36,7 @@ class ContentBasedRecomender:
         tfidf_matrix = tfidf_vectorizer.fit_transform(self.bow_df[cols.BAG_OF_WORDS])
 
         # Convert tifidf matrix to a dataframe
-        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names())
+        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
 
         return tfidf_df
 
@@ -59,12 +59,11 @@ class ContentBasedRecomender:
         featureNames = tfidf.get_feature_names_out()
         assert (len(featureNames) == tfidf_matrix.shape[1]), "Feature names and matrix dimensions do not match"
 
-        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf.get_feature_names())
+        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf.get_feature_names_out())
 
         # Creating list of indices for later matching
         indices = pd.Series(bow_df.index, index=bow_df[cols.NAME])
         animeNames = indices.index.values
-
 
         # # Computing the cosine similarity matrix: Option 2
         # if cosine folder already exists, do not compute cosine similarity again
@@ -82,39 +81,30 @@ class ContentBasedRecomender:
 
 
 def main():
-    
+    print("[ContentBasedRecomender] Initializing...")
     anime_dataset = ANIME_DATASET
-    recomender = ContentBasedRecomender(anime_dataset)
+    recomender = ContentBasedRecommender(anime_dataset)
 
-    params = (
-        # 'Kiss x Sis (TV)', 7
-        'Kimetsu no Yaiba', 50
-        # 'Cowboy Bebop', 7
-        # 'Mai-Otome', 7
-        # 'Shin Shirayuki-hime Densetsu Prétear', 7
-        # 'Sen to Chihiro no Kamikakushi', 7
-        # 'Air', 7
-        # 'Blood+', 7
-        # 'Futakoi', 7
-        # 'Tokyo Underground', 7
-        # 'GetBackers', 7
-        # 'Green Green', 7
-    )
 
-    print('Anime info:')
-    print(anime_dataset.get_by_name(params[0]))
-    print('iloc = ', anime_dataset.convert_id_to_index(anime_dataset.get_by_name(params[0])[cols.MAL_ID]))
-    input('Press enter to continue...')
+    anime_name = ''
+    while not anime_name:
+        anime_name = input(">>> Enter anime name: ")
+        exact_anime = anime_dataset.get_by_name(anime_name)
+        if exact_anime is None:
+            print(f"[ContentBasedRecomender] Anime {anime_name} not found")
+            search_results = anime_dataset.search_by_name(anime_name)
+            print(f"[ContentBasedRecomender] Similar results for {anime_name}: \n", search_results[[cols.MAL_ID, cols.NAME]])
+            anime_name = ''
 
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_colwidth', 160)
-    result = recomender.execute(*params)
+    selection_range = 7
+    print(f"[ContentBasedRecomender] Selected anime: {anime_name}")
+
+    result = recomender.execute(anime_name, selection_range)
     print (f'Final result: \n{result}')
 
 
 def test():
-    recomender = ContentBasedRecomender(ANIME_DATASET)
+    recomender = ContentBasedRecommender(ANIME_DATASET)
     bow_df = recomender.bow_df
 
     bow_df.to_csv('bow_df.csv')

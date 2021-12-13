@@ -18,12 +18,12 @@ class AnimeDataset:
 
     def _preprocess_df(self):
         self.anime_df = removeInvalidRows(self.anime_df, cols.GENRES, ['Unknown', 'unknown'])
-        self.anime_df = removeInvalidRows(self.anime_df, cols.STUDIOS, ['Unknown', 'unknown'])
-        self.anime_df = removeInvalidRows(self.anime_df, cols.PRODUCERS, ['Unknown', 'unknown'])
-        self.anime_df = removeInvalidRows(self.anime_df, cols.SOURCE, ['Unknown', 'unknown'])
-        self.anime_df = removeInvalidRows(self.anime_df, cols.TYPE, ['Unknown', 'unknown'])
-        self.anime_df = removeInvalidRows(self.anime_df, cols.EPISODES, ['Unknown', 'unknown'])
-        self.anime_df = removeInvalidRows(self.anime_df, cols.DURATION, ['Unknown', 'unknown'])
+        # self.anime_df = removeInvalidRows(self.anime_df, cols.STUDIOS, ['Unknown', 'unknown'])
+        # self.anime_df = removeInvalidRows(self.anime_df, cols.PRODUCERS, ['Unknown', 'unknown'])
+        # self.anime_df = removeInvalidRows(self.anime_df, cols.SOURCE, ['Unknown', 'unknown'])
+        # self.anime_df = removeInvalidRows(self.anime_df, cols.TYPE, ['Unknown', 'unknown'])
+        # self.anime_df = removeInvalidRows(self.anime_df, cols.EPISODES, ['Unknown', 'unknown'])
+        # self.anime_df = removeInvalidRows(self.anime_df, cols.DURATION, ['Unknown', 'unknown'])
         self.anime_df = removeInvalidRows(self.anime_df, cols.SYNOPSIS, ['Unknown', 'unknown'])
         self.anime_df = removeInvalidRows(self.anime_df, cols.SYNOPSIS_KEYWORDS, ['Unknown', 'unknown'])
         self.anime_df = removeInvalidRows(self.anime_df, cols.SCORE, ['Unknown', 'unknown'])
@@ -55,6 +55,10 @@ class AnimeDataset:
         if len(retults) == 0:
             return None
         return retults.iloc[0]
+
+    def search_by_name(self, name: str) -> pd.DataFrame:
+        results = self.anime_df[self.anime_df[cols.NAME].str.contains(name, case=False)]
+        return results
 
     def convert_index_to_id(self, index: int) -> int:
         return self.anime_df.iloc[index][cols.MAL_ID]
