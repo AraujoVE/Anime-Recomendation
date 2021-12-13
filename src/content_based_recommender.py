@@ -13,6 +13,7 @@ class ContentBasedRecommender:
 
         self.anime_dataset = anime_dataset
         self.bow_df = self._create_bow_df()
+        self.tfidf_df = self._initialize_tfidf()
 
     def _set_default_prefs(self) -> None:
         ''' Sets the default preferences for the recommender '''
@@ -30,56 +31,40 @@ class ContentBasedRecommender:
 
         return bow_df
 
-    def _create_tfidf_matrix(self) -> pd.DataFrame:
+    def _initialize_tfidf(self) -> None:
         ''' Creates a dataframe with the tfidf representation of the anime titles '''
-        tfidf_vectorizer = TfidfVectorizer(stop_words='english')
-        tfidf_matrix = tfidf_vectorizer.fit_transform(self.bow_df[cols.BAG_OF_WORDS])
-
-        # Convert tifidf matrix to a dataframe
-        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
-
-        return tfidf_df
-
-    def get_recommendations(self, mal_id: int, n: int = 10) -> pd.DataFrame:
-        ''' Returns a dataframe with the top n recommendations for the given anime_id '''
-
-        pass
-
-    def execute(self, animeName: str, selectionRange: int):
-        bow_df = self.bow_df
-        print(f"[ContentBasedRecomender] Executing for {animeName}")
-
-        print("[ContentBasedRecomender] Creating TF-IDF matrix")
         # Defining a TF-IDF Vectorizer Object.
-        tfidf = TfidfVectorizer(tokenizer=lambda x: x.split(' '))
+        # TF-IDF represents how important is a word in the phrase to a document.
+        self.tfidf_vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split(' '))
 
         # Constructing the required TF-IDF matrix by fitting and transforming the data. 
-        # TF-IDF represents how important is a word in the phrase to a document.
-        tfidf_matrix = tfidf.fit_transform(bow_df[cols.BAG_OF_WORDS])
-        featureNames = tfidf.get_feature_names_out()
-        assert (len(featureNames) == tfidf_matrix.shape[1]), "Feature names and matrix dimensions do not match"
+        print("[ContentBasedRecomender] Creating TF-IDF matrix")
+        self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(self.bow_df[cols.BAG_OF_WORDS])
 
-        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf.get_feature_names_out())
+        featureNames = self.tfidf_vectorizer.get_feature_names_out()
+        assert '' not in featureNames
+        assert (len(featureNames) == self.tfidf_matrix.shape[1]), "Feature names and matrix dimensions do not match"
 
+    def execute(self, animeName: str, selectionRange: int) -> pd.DateOffset:
+        print(f"[ContentBasedRecomender] Executing for {animeName}")
+  
         # Creating list of indices for later matching
-        indices = pd.Series(bow_df.index, index=bow_df[cols.NAME])
+        indices = pd.Series(self.bow_df.index, index=self.bow_df[cols.NAME])
         animeNames = indices.index.values
 
-        # # Computing the cosine similarity matrix: Option 2
+        # Computing the cosine similarity matrix
         # if cosine folder already exists, do not compute cosine similarity again
         if not os.path.exists('cosine/merged.csv'):
             print("[ContentBasedRecomender] Computing cosine similarity matrix...")
-            calcAnimeSimilarityMatrix(animeNames, tfidf_matrix, featureNames)
+            calcAnimeSimilarityMatrix(animeNames, self.tfidf_matrix, self.tfidf_vectorizer.get_feature_names_out())
         else:
             print("[ContentBasedRecomender] Cosine similarity matrix already exists")
         # Get most similar to chosen anime
         print("[ContentBasedRecomender] Looking for similar anime...")
         mostSimilar = getContentBasedRecommendation(
-            bow_df, 'cosine/merged.csv', indices, animeName, selectionRange)
+            self.bow_df, 'cosine/merged.csv', indices, animeName, selectionRange)
 
         return mostSimilar
-
-
 
 def prompt_anime(suggest_similar: bool = True) -> str:
     ''' Prompts the user for a valid anime name '''
@@ -112,13 +97,14 @@ def main():
 
     # Prompt user for anime name
     anime_name = prompt_anime()
-
     print(f"[ContentBasedRecomender] Selected anime: {anime_name}")
 
-    result = recomender.execute(anime_name, selectionRange=7)
+    # Get recommendations
+    recommended_df = recomender.execute(anime_name, selectionRange=7)
 
+    # Print results
     print("Similar animes:")
-    print(result)
+    print(recommended_df)
 
 if __name__ == "__main__":
     main()
