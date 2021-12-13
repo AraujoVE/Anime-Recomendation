@@ -1,6 +1,6 @@
 from matplotlib import use
 import pandas as pd
-from pathy import os
+import os
 
 from synopsis_keywords import ANIME_SYNOPSIS_KEYWORDS_FILE, generateSynopsisKeywords
 

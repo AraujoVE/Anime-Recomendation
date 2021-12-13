@@ -1,12 +1,8 @@
 from dataclasses import dataclass
-from time import sleep
-from typing import List, Optional
-from flask import current_app
-from more_itertools import sliced
+from typing import List
 import numpy as np
-import pandas as pd
-from pathy import os
-from spacy import sys
+import os
+import sys
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
 

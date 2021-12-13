@@ -7,3 +7,4 @@ contractions
 pandas-stubs
 tqdm
 dearpygui
+sklearn
