@@ -1,8 +1,5 @@
-from re import L
 from typing import Optional
-from unittest import case, result
 import pandas as pd
-from typer import Option
 import cols
 from utils import lowerCaseCols, removeInvalidRows, splitCols, standardizeDuration
 
@@ -41,8 +38,6 @@ class AnimeDataset:
         self.anime_df = splitCols(self.anime_df, pluralCols)
 
         self.anime_df.reset_index(inplace=True, drop=True)
-
-        self.anime_df.to_csv(f'anime_merged_preprocessed.csv', index=False)
 
     def get_by_name(self, name: str) -> Optional[pd.Series]:
         results = self.anime_df[self.anime_df[cols.NAME] == name]

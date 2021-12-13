@@ -1,9 +1,17 @@
+define n
 
+
+endef
+
+all:
+	$(error "Plese choose between 'make content' and 'make collaborative'")
 
 content: dataset/anime_merged.csv
+	@pip install -r requirements.txt 1>/dev/null || (echo "pip install failed" && exit 1)
 	python src/content_based_recommender.py
 
 collaborative: dataset/anime.csv dataset/rating_complete.csv
+	@pip install -r requirements.txt 1>/dev/null || (echo "pip install failed" && exit 1)
 	python src/collaborative_filtering_recommender.py
 
 dataset/anime_merged.csv: dataset/anime.csv dataset/anime_with_synopsis_keywords.csv
@@ -16,14 +24,20 @@ uninstall_nltk:
 	@echo "Uninstalling nltk from home directory"
 	rm -rf ~/nltk_data
 
-dataset: | archive.zip
+dataset/%: | archive.zip
 	mkdir ./dataset
 	unzip ./archive.zip -d ./dataset/
 
 archive.zip:
-	@echo "archive.zip not found"
-	@echo "Please download the dataset from https://www.kaggle.com/hernan4444/anime-recommendation-database-2020/version/7"
-	@echo "and place it in the root directory of this project"
+	$(error $narchive.zip not found \
+	$nPlease download the dataset from https://www.kaggle.com/hernan4444/anime-recommendation-database-2020/version/7 \
+	$nand place it in the root directory of this project )
+	
 zip:
 	@echo "Zipping up the project"
-	zip -r project.zip src archive.zip
+	rm -f project.zip
+	zip -r project.zip src .gitignore LICENSE README.md Makefile requirements.txt
+
+zip-all:
+	@echo "Zipping up the project with heavy files"
+	zip -r project.zip .

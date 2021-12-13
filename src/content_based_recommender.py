@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pathy import os
+import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
 from rake_keywords import getKeywords
@@ -93,6 +93,12 @@ def main():
         if exact_anime is None:
             print(f"[ContentBasedRecomender] Anime {anime_name} not found")
             search_results = anime_dataset.search_by_name(anime_name)
+
+            if search_results.empty:
+                print("[ContentBasedRecomender] No similar results found")
+                anime_name = ''
+                continue
+
             print(f"[ContentBasedRecomender] Similar results for {anime_name}: \n", search_results[[cols.MAL_ID, cols.NAME]])
             anime_name = ''
 
