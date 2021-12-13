@@ -112,7 +112,6 @@ def merge_partial_similarity_matrices(headers: List[str], partials_folder: str, 
             with open(partial_sim_matrix_path, "r") as partial_sim_matrix_file:
                 # Read partial similarity matrix
                 partial_sim_matrix_lines = partial_sim_matrix_file.readlines()
-                print(f'{len(partial_sim_matrix_lines)=}')
 
                 # Write partial similarity matrix to merged file
                 merged_file.writelines(partial_sim_matrix_lines)

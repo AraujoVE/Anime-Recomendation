@@ -16,11 +16,11 @@ class ContentBasedRecomender:
 
     def _set_default_prefs(self) -> None:
         ''' Sets the default preferences for the recommender '''
-        self.colsToUse = [cols.GENRES, cols.STUDIOS, cols.PRODUCERS, cols.TYPE, cols.EPISODES, cols.SOURCE, cols.DURATION]
+        self.colsToUse = [ cols.SYNOPSIS_KEYWORDS, cols.GENRES, cols.STUDIOS, cols.PRODUCERS, cols.TYPE, cols.EPISODES, cols.SOURCE, cols.DURATION]
 
     def _create_bow_df(self) -> pd.DataFrame:
         ''' Creates a dataframe with the bow (Bag of Words) representation of the anime titles '''
-        colsToApplyBOW = [ cols.GENRES, cols.STUDIOS, cols.PRODUCERS, cols.TYPE, cols.EPISODES, cols.SOURCE, cols.DURATION]
+        colsToApplyBOW = self.colsToUse
 
         bow_df = pd.DataFrame()
         bow_df[cols.MAL_ID] = self.anime_dataset.anime_df[cols.MAL_ID]
@@ -88,11 +88,11 @@ def main():
 
     params = (
         # 'Kiss x Sis (TV)', 7
-        # 'Kimetsu no Yaiba', 7
+        'Kimetsu no Yaiba', 50
         # 'Cowboy Bebop', 7
         # 'Mai-Otome', 7
         # 'Shin Shirayuki-hime Densetsu Prétear', 7
-        'Sen to Chihiro no Kamikakushi', 7
+        # 'Sen to Chihiro no Kamikakushi', 7
         # 'Air', 7
         # 'Blood+', 7
         # 'Futakoi', 7
@@ -116,6 +116,8 @@ def main():
 def test():
     recomender = ContentBasedRecomender(ANIME_DATASET)
     bow_df = recomender.bow_df
+
+    bow_df.to_csv('bow_df.csv')
 
     unified_bow_series = bow_df[cols.BAG_OF_WORDS]
 

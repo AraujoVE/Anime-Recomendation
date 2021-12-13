@@ -153,14 +153,14 @@ def getColWeights(_, features: List[str]):
     print('[ColWeights] Starting calculations...')
     # TODO: assert the following dict is on the same order of the original columns
     colWeights = {
-        'synopsis_keywords' : 0,
-        'genres' : 10,
-        'type' : 0,
-        'episodes' : 0,
-        'studios' : 0,
-        'producers' : 0,
-        'source' : 0,
-        'duration' : 0,
+        'synopsis_keywords' : 100,
+        'genres' : 50,
+        'type' : 5,
+        'episodes' : 2,
+        'studios' : 2,
+        'producers' : 1,
+        'source' : 1,
+        'duration' : 1,
     }
 
     def featureColName(feature: str):
