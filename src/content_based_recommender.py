@@ -80,50 +80,45 @@ class ContentBasedRecommender:
         return mostSimilar
 
 
+
+def prompt_anime(suggest_similar: bool = True) -> str:
+    ''' Prompts the user for a valid anime name '''
+    while True:
+        anime_name = input(">>> Enter anime name: ")
+
+        exact_anime = ANIME_DATASET.get_by_name(anime_name)
+        if exact_anime is not None:
+            return anime_name
+
+        if suggest_similar:
+            print("[ContentBasedRecomender] Anime not found, did you mean one of these?")
+            print_similar_anime(anime_name)
+        else:
+            print("[ContentBasedRecomender] Anime not found")
+            
+
+def print_similar_anime(anime_name: str):
+    search_results = ANIME_DATASET.search_by_name(anime_name)
+    if not search_results.empty:
+        print(search_results[[cols.MAL_ID, cols.NAME]])
+    else:
+        print("[ContentBasedRecomender] No similar anime found")
+
 def main():
+    # Initialize recommender and dataset
     print("[ContentBasedRecomender] Initializing...")
     anime_dataset = ANIME_DATASET
     recomender = ContentBasedRecommender(anime_dataset)
 
+    # Prompt user for anime name
+    anime_name = prompt_anime()
 
-    anime_name = ''
-    while not anime_name:
-        anime_name = input(">>> Enter anime name: ")
-        exact_anime = anime_dataset.get_by_name(anime_name)
-        if exact_anime is None:
-            print(f"[ContentBasedRecomender] Anime {anime_name} not found")
-            search_results = anime_dataset.search_by_name(anime_name)
-
-            if search_results.empty:
-                print("[ContentBasedRecomender] No similar results found")
-                anime_name = ''
-                continue
-
-            print(f"[ContentBasedRecomender] Similar results for {anime_name}: \n", search_results[[cols.MAL_ID, cols.NAME]])
-            anime_name = ''
-
-    selection_range = 7
     print(f"[ContentBasedRecomender] Selected anime: {anime_name}")
 
-    result = recomender.execute(anime_name, selection_range)
-    print (f'Final result: \n{result}')
+    result = recomender.execute(anime_name, selectionRange=7)
 
-
-def test():
-    recomender = ContentBasedRecommender(ANIME_DATASET)
-    bow_df = recomender.bow_df
-
-    bow_df.to_csv('bow_df.csv')
-
-    unified_bow_series = bow_df[cols.BAG_OF_WORDS]
-
-    all_keywords = []
-    for bow in unified_bow_series:
-        all_keywords.extend(bow.split(' '))
-
-    print(all_keywords[:100])
+    print("Similar animes:")
+    print(result)
 
 if __name__ == "__main__":
     main()
-    # test()
-    # print(ANIME_DATASET.convert_index_to_id(100))
