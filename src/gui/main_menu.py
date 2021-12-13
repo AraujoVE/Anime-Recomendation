@@ -34,7 +34,7 @@ def update_anime_info(anime: Union[pd.Series, None]):
         dpg.set_value("search_synopsis", f'Synopsis: {anime[cols.SYNOPSIS]}', multiline=True)    
 
 def search_anime(anime_name: str):
-    animes = ANIME_DATASET.search_by_name(anime_name)
+    animes = ANIME_DATASET.get_by_name(anime_name)
     if animes.empty:
         print("No anime found")
         update_anime_info(None)

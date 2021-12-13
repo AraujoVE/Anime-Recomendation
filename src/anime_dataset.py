@@ -1,6 +1,8 @@
+from re import L
 from typing import Optional
-from unittest import case
+from unittest import case, result
 import pandas as pd
+from typer import Option
 import cols
 from utils import lowerCaseCols, removeInvalidRows, splitCols, standardizeDuration
 
@@ -15,8 +17,6 @@ class AnimeDataset:
         self._preprocess_df()
 
     def _preprocess_df(self):
-        # Drop if genre is unknown
-
         self.anime_df = removeInvalidRows(self.anime_df, cols.GENRES, ['Unknown', 'unknown'])
         self.anime_df = removeInvalidRows(self.anime_df, cols.STUDIOS, ['Unknown', 'unknown'])
         self.anime_df = removeInvalidRows(self.anime_df, cols.PRODUCERS, ['Unknown', 'unknown'])
@@ -44,24 +44,34 @@ class AnimeDataset:
 
         self.anime_df.to_csv(f'anime_merged_preprocessed.csv', index=False)
 
-    def search_by_name(self, name) -> pd.DataFrame:
-        return self.anime_df[self.anime_df['Name'].str.contains(name, case=False)].sort_values(by=['Score'], ascending=False)
+    def get_by_name(self, name: str) -> Optional[pd.Series]:
+        results = self.anime_df[self.anime_df[cols.NAME] == name]
+        if len(results) == 0:
+            return None
+        return results.iloc[0]
 
-    def searh_by_id(self, mal_id) -> Optional[pd.Series]:
+    def get_by_id(self, mal_id: int) -> Optional[pd.Series]:
         retults = self.anime_df[self.anime_df[cols.MAL_ID] == mal_id]
         if len(retults) == 0:
             return None
         return retults.iloc[0]
 
+    def convert_index_to_id(self, index: int) -> int:
+        return self.anime_df.iloc[index][cols.MAL_ID]
+
+    def convert_id_to_index(self, mal_id: int) -> int:
+        return self.anime_df[self.anime_df[cols.MAL_ID] == mal_id].index[0]
+
 ANIME_DATASET = AnimeDataset()
 
-def datasetIndexToMALID(index: int) -> int:
-    return ANIME_DATASET.anime_df.iloc[index][cols.MAL_ID]
 
-def getAnimeByMALID(mal_id: int) -> Optional[pd.Series]:
-    return ANIME_DATASET.searh_by_id(mal_id)
+def test():
+    kimetsu = 'Kimetsu no Yaiba'
+    search_results = ANIME_DATASET.get_by_name(kimetsu)
+    pd.set_option('display.max_colwidth', -1)
+    print(search_results)
+
+    
 
 if __name__ == '__main__':
-    iloc = 597
-    print(ANIME_DATASET.anime_df.iloc[iloc]['Name'])
-    print(ANIME_DATASET.anime_df.iloc[iloc]['MAL_ID'])
+    test()
