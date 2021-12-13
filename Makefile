@@ -1,7 +1,29 @@
 
 
-.PHONY: kimetsu
-kimetsu:
-	@echo "Kimetsu no Yaiba" | python src/content_based_recommender.py
+content: dataset/anime_merged.csv
+	python src/content_based_recommender.py
+
+collaborative: dataset/anime.csv dataset/rating_complete.csv
+	python src/collaborative_filtering_recommender.py
+
+dataset/anime_merged.csv: dataset/anime.csv dataset/anime_with_synopsis_keywords.csv
+	python src/merge_datasets.py
+
+dataset/anime_with_synopsis_keywords.csv:
+	python src/synopsis_keywords.py
+
 uninstall_nltk:
-	
+	@echo "Uninstalling nltk from home directory"
+	rm -rf ~/nltk_data
+
+dataset: | archive.zip
+	mkdir ./dataset
+	unzip ./archive.zip -d ./dataset/
+
+archive.zip:
+	@echo "archive.zip not found"
+	@echo "Please download the dataset from https://www.kaggle.com/hernan4444/anime-recommendation-database-2020/version/7"
+	@echo "and place it in the root directory of this project"
+zip:
+	@echo "Zipping up the project"
+	zip -r project.zip src archive.zip
