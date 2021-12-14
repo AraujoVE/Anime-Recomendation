@@ -8,17 +8,17 @@ all:
 
 content: dataset/anime_merged.csv
 	@pip install -r requirements.txt 1>/dev/null || (echo "pip install failed" && exit 1)
-	python src/content_based_recommender.py
+	python3 src/content_based_recommender.py
 
 collaborative: dataset/anime.csv dataset/rating_complete.csv
 	@pip install -r requirements.txt 1>/dev/null || (echo "pip install failed" && exit 1)
-	python src/collaborative_filtering_recommender.py
+	python3 src/collaborative_filtering_recommender.py
 
 dataset/anime_merged.csv: dataset/anime.csv dataset/anime_with_synopsis_keywords.csv
-	python src/merge_datasets.py
+	python3 src/merge_datasets.py
 
 dataset/anime_with_synopsis_keywords.csv:
-	python src/synopsis_keywords.py
+	python3 src/synopsis_keywords.py
 
 uninstall_nltk:
 	@echo "Uninstalling nltk from home directory"

@@ -10,8 +10,11 @@ class AnimeDataset:
         from cols import MAL_ID, NAME, SCORE, GENRES, TYPE, EPISODES, STUDIOS, PRODUCERS, SOURCE, DURATION, SYNOPSIS, SYNOPSIS_KEYWORDS
         anime_csv_cols = [ MAL_ID, NAME, SCORE, GENRES, TYPE, EPISODES, STUDIOS, PRODUCERS, SOURCE, DURATION, SYNOPSIS, SYNOPSIS_KEYWORDS ]
 
+        print('[Anime Dataset] Loading anime dataset...')
         self.anime_df = pd.read_csv(f'{DATASET_FOLDER}/anime_merged.csv', usecols=anime_csv_cols)
+        print('[Anime Dataset] Preprocessing dataset...')
         self._preprocess_df()
+        print('[Anime Dataset] Ready!')
 
     def _preprocess_df(self):
         self.anime_df = removeInvalidRows(self.anime_df, cols.GENRES, ['Unknown', 'unknown'])

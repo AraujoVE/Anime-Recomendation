@@ -1,14 +1,6 @@
 import re
-from time import sleep
 from typing import List
 import pandas as pd
-import numpy as np
-from scipy.spatial.distance import cosine
-from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
-import cols
-
-from cosine import PartialMatrixCreationParams, create_weighted_cosine_similarity_matrix
 
 animeDurations = [
     {'time': 120, 'type': 'curtíssimo'},
